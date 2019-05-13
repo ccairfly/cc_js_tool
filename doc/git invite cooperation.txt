@@ -1,0 +1,3 @@
+在仓库Settings页面的Collaborators处，可以根据用户名搜索，添加合作者。
+
+在自己这边点击了Add collaborator以后，Github会给对方发一份邮件到注册的那个邮箱，对方要在邮件中确认以后才算是添加成功
