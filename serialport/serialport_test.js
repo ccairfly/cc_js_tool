@@ -1,43 +1,50 @@
 const SerialPort = require("serialport");
+const fs = require('fs')
 
-const syncDeviceStr = 'be500003000001ed'
-const syncDeviceAck1 = 'be500003020001eb'
-const syncDeviceAck2 = 'be00000500300200000a'
-const syncDeviceAck3 = 'be000001023e'
-var sendcmd1 = [0xbe,0x50,0x00,0x01,0x01,0xef]
-var sendcmd2 = [0xbe,0x00,0x00,0x01,0xe3,0x5d]
-var sendcmd3 = [0xbe,0x00,0x01,0x05,0xe1,0x30,0x02,0x14,0x00,0x14]
-var sendcmd4 = [0xbe,0x00,0x02,0x01,0xf3,0x4b]
+const handShakeRequest = 'be500003000001ed'
+const handShakeSuccess = 'be500003020001eb'
+const bootmodeSetSuccess = 'be000101003f'
+var sendHandshake = [0xbe,0x50,0x00,0x01,0x01,0xef]
+var sendSetBootmode = [0xbe,0x00,0x01,0x05,0xe1,0x30,0x02,0x30,0x00,0xf8] //signal test
+var sendFlashReboot = [0xbe,0x00,0x02,0x01,0xf3,0x4b]
 
-var portNow = 'COM4'
-SerialPort.list(function (err, ports) {
-  ports.forEach((port)=>{
-    console.log(port.comName);
-    // portNow = port.comName
-  });
-});
+var readConfigSuccess = false 
+// SerialPort.list(function (err, ports) {
+//   ports.forEach((port)=>{
+//     console.log(port.comName);
+//   });
+// });
+try {
+  var configData = fs.readFileSync('./config.json').toString()
+  var configObj = JSON.parse(configData)
+  if(configObj.comPort.indexOf("COM") == -1) {
+    console.log("config.json COM setting error !!!");
+  } else {
+    readConfigSuccess = true
+    console.log("open serial port " + configObj.comPort);
+  }
+} catch(err){
+  console.log("read config.json error !!!");
+}
 
-var serialPortNow = new SerialPort(portNow,{
+if(readConfigSuccess == true) {
+  var serialPortNow = new SerialPort(configObj.comPort,{
     baudRate: 921600
-})
+  })
 
-serialPortNow.on("data",(data)=>{
-  if(data.toString('hex') == syncDeviceStr) {
-    console.log('syncDevice');
-    var sendBuf = Buffer.from(sendcmd1,'ascii')
-    serialPortNow.write(sendBuf)
-    setTimeout(() => {
-        var sendBuf2 = Buffer.from(sendcmd2,'ascii')
-        serialPortNow.write(sendBuf2)
-        setTimeout(() => {
-            var sendBuf3 = Buffer.from(sendcmd3,'ascii')
-            serialPortNow.write(sendBuf3)
-            setTimeout(() => {
-                var sendBuf4 = Buffer.from(sendcmd4,'ascii')
-                serialPortNow.write(sendBuf4)
-            }, 500);
-        }, 500);
-    }, 500);
-  } 
-});
+  serialPortNow.on("data",(data)=>{
+    if(data.toString('hex') == handShakeRequest) {
+      console.log('opening') //收到开机握手请求,发送握手信号
+      serialPortNow.write(Buffer.from(sendHandshake,'ascii'))
+    } else if(data.toString('hex') == handShakeSuccess) {
+      console.log('syncSuccess')  //握手成功设置bootmode
+      serialPortNow.write(Buffer.from(sendSetBootmode,'ascii'))
+    } else if(data.toString('hex') == bootmodeSetSuccess) {
+      //bootmode设置成功,重启进入testmode
+      console.log("enter signal testmode");
+      serialPortNow.write(Buffer.from(sendFlashReboot,'ascii'))
+    }
+  });
+}
+
 
