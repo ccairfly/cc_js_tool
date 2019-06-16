@@ -1,80 +1,110 @@
 <template>
   <div>
-     <el-button type="primary" plain class="btn" @click="selectSerial">选择串口</el-button>
-     <!-- <button class="btn">选择串口</button>
-     <button class="openBtn">打开串口</button> -->
-     <el-select v-model="value" placeholder="请选择">
-        <el-option
-          v-for="item in options"
-          :key="item.label"
-          :label="item.label"
-          :value="item.value">
-        </el-option>
-      </el-select>
-      <div class="openBtn">
-        <el-button type="primary" plain class="btn" @click="opentSerial">打开串口</el-button>
-        <el-checkbox v-model="checked">开启test-mode</el-checkbox>
-      </div>
-      <div class="textArea">
-        <el-input
-          type="textarea"
-          :rows="3"
-          v-model="textarea"
-          style="width:500px;">
-        </el-input>
-      </div>
+    <el-row :gutter="20">
+      <el-col :span="6">
+         <el-button type="primary" @click="selectSerial">选择串口</el-button>
+      </el-col>
+      <el-col :span="6">
+          <el-select v-model="COMValue" placeholder="请选择">
+              <el-option
+                v-for="item in options"
+                :key="item.label"
+                :label="item.label"
+                :value="item.value">
+              </el-option>
+            </el-select>
+      </el-col>
+    </el-row>
+    <el-row style="margin-top:20px;margin-left: -10px;">
+      <el-col :span="6">
+         <el-button type="primary" @click="openSerial" :disabled="!isCOMOpenActive">打开串口</el-button>
+      </el-col>
+      <el-col :span="6"></el-col>
+    </el-row>
+    <!-- <div class="textArea"> -->
+      <el-row style="margin-top:20px;">
+        <el-col :span="24">
+          <div style="background-color: #eee ; height:200px;" class="text-body">
+          </div>
+        </el-col>
+      </el-row>
+    <!-- </div> -->
   </div>
 </template>
 <script>
+var isWSOpen = false
+function wsOpneHandler(){
+  console.log('WS server open');
+  isWSOpen = true
+}
+
+function wsCloseHandler(){
+  console.log('WS server close');
+  isWSOpen = false
+}
+
+const ws = new WebSocket("ws://localhost:8001")
 export default {
   data() {
     return {
       options: [],
-      value: '',
+      comList:[],
+      COMValue: '',
+      isCOMOpenActive : false,
       checked:true,//复选框选中状态
       textarea:'',//文本域中显示的内容
     }
   },
+  created(){    
+    ws.onopen = wsOpneHandler
+    ws.onmessage = this.wsDataHandler
+    ws.onclose = wsCloseHandler
+  },
   methods: {
     selectSerial(){
       //选择串口
-      //192.168.1.102:3000/users/ports
-      // https://www.easy-mock.com/mock/5c6ad911d8bc8b31033c36cc/example/get-data-1
-      this.$http.get('http://192.168.1.102:3000/users/ports')
-      .then((res) => {
-        // console.log(res);
-        (res.data).map((item) =>{
-          // console.log(item)
-          var aobj = {
-            value : '',
-            label : ''
-          }
-          aobj.label = item
-          aobj.value = item
-          this.options.push(aobj)
-        })
-        // console.log(this.options)
-      })
+      if(isWSOpen == true) {
+        ws.send("get serialport");
+      }
     },
-    opentSerial(){
-      // let params = {}
+    openSerial(){
       //打开串口
-      this.$http.post('http://192.168.1.102:3000/users/openSerialport',{
-        'com' : 'COM29'
-      }).then((res) => {
-        console.log(res)
-      })
+      ws.send("[open serialport]|" + this.COMValue);
+    },
+    wsDataHandler(evt){
+      if(evt.data.indexOf('get serialport')!=-1) {
+        
+        var comData = evt.data.split("|")
+        //获取到有com号
+        console.log("get serialport:" + comData[1]);
+        if(comData[1]){
+          this.options = []
+          this.comList = []
+          this.comList = comData[1].split(",")
+          this.comList.forEach((element,i) => {
+            var serialobj = {}
+            serialobj.label = element
+            serialobj.value = element
+            this.options.push(serialobj)
+          })
+        }
+      } else if(evt.data.indexOf('open success')!=-1) {
+        this.isCOMOpenActive = false
+        console.log("port open success");
+      }
     }
   },
+  watch :{
+    COMValue(newval , oldval){
+      if(this.COMValue != oldval){
+        this.isCOMOpenActive = true
+      }
+    }
+  }
 }
 </script>
 <style scoped>
-.btn{
-  position: absolute;
-  left: 60px;
-}
-.openBtn{
-  margin-top: 60px;
+.text-header {
 }
 .textArea{
   margin-top: 60px;
