@@ -21,32 +21,32 @@
       </el-col>
       <el-col :span="6"></el-col>
     </el-row>
+
+    <el-row style="margin-top:20px;margin-left: -10px;">
+      <el-col :span="6">
+         <el-button type="primary" @click="closeSerial" :disabled="isCOMOpenActive || COMValue == ''">关闭串口</el-button>
+      </el-col>
+      <el-col :span="6"></el-col>
+    </el-row>
+
     <!-- <div class="textArea"> -->
-      <el-row style="margin-top:20px;">
-        <el-col :span="24">
-          <div style="background-color: #eee ; height:200px;" class="text-body">
-          </div>
-        </el-col>
-      </el-row>
+    <el-row style="margin-top:20px;">
+      <el-col :span="24">
+        <display v-model="message"></display>
+      </el-col>
+    </el-row>
     <!-- </div> -->
   </div>
 </template>
 <script>
-var isWSOpen = false
-function wsOpneHandler(){
-  console.log('WS server open');
-  isWSOpen = true
-}
-
-function wsCloseHandler(){
-  console.log('WS server close');
-  isWSOpen = false
-}
+import display from "./display.vue"
 
 const ws = new WebSocket("ws://localhost:8001")
 export default {
   data() {
     return {
+      isWSOpen : false,
+      message : '',
       options: [],
       comList:[],
       COMValue: '',
@@ -56,20 +56,41 @@ export default {
     }
   },
   created(){    
-    ws.onopen = wsOpneHandler
+    ws.onopen = this.wsOpneHandler
     ws.onmessage = this.wsDataHandler
-    ws.onclose = wsCloseHandler
+    ws.onclose = this.wsCloseHandler
+    ws.onerror = this.wsErrorHandler
+  },
+  components : {
+    display,
   },
   methods: {
     selectSerial(){
       //选择串口
-      if(isWSOpen == true) {
+      if(this.isWSOpen == true) {
         ws.send("get serialport");
       }
+    },
+    closeSerial(){
+      ws.send("[close serialport]|" + this.COMValue);
     },
     openSerial(){
       //打开串口
       ws.send("[open serialport]|" + this.COMValue);
+    },
+    wsCloseHandler(){
+      console.log('WS server close');
+      this.sWSOpen = false
+      this.message = "服务器关闭"
+    },
+    wsErrorHandler(){
+      this.isWSOpen = false
+      this.message = "打开服务器发生错误"
+    },
+    wsOpneHandler(){
+      console.log('WS server open');
+      this.isWSOpen = true
+      this.message = "服务器已经链接"
     },
     wsDataHandler(evt){
       if(evt.data.indexOf('get serialport')!=-1) {
@@ -91,6 +112,18 @@ export default {
       } else if(evt.data.indexOf('open success')!=-1) {
         this.isCOMOpenActive = false
         console.log("port open success");
+        this.message = "串口打开成功"
+        setTimeout(()=>{
+          this.message = "请按开机按键开机"
+        }, 500);
+      } else if(evt.data.indexOf('close success')!=-1) {
+        this.isCOMOpenActive = true
+        console.log("port close success");
+        this.message = "串口关闭"
+      } else if(evt.data.indexOf('sync success')!=-1){
+        this.message = "设备同步成功"
+      } else if(evt.data.indexOf('test mode')!=-1){
+        this.message = "进入测试模式"
       }
     }
   },
