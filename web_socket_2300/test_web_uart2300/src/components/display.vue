@@ -40,6 +40,10 @@ export default {
     },
     watch: {
         'value'(){
+            if(this.value == 'cleardata') {
+                this.innerText = ''
+                return;
+            }
             if (!this.isLocked || !this.innerText) {
                 this.innerText += this.getTimeStr()
                 this.innerText += this.value
