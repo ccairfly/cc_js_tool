@@ -6,16 +6,13 @@ const handShakeRequest = 'be500003000001ed'
 const handShakeSuccess = 'be500003020001eb'
 const handShakeSuccess2 = 'be53000100ed'
 const loadRamrunSuccess = 'be54a201202a'
-const enterRamrunSuccess = 'be6000060001009000004a'
 
 var sendHandshake = [0xbe,0x50,0x00,0x01,0x01,0xef]
 // var sendHandshake2 = [0xbe,0x53,0x00,0x0c,0xdc,0x05,0x01,0x20,0x18,0xea,0x00,0x00,0xf4,0xd9,0x84,0x46,0x47] //烧录工具
 // var sendHandshake2 = [0xbe,0x53,0x00,0x0c,0xdc,0x05,0x01,0x20,0x80,0xf8,0x00,0x00,0x5f,0x78,0x55,0x4a,0xf2] //小牛测控改
 var sendRunRamrun = [0xbe,0x55,0x3c,0x00,0xb0]
-var sendReadFactoryData = [0xbe,0x03,0x01,0x08,0x00,0xf0,0x0f,0x38,0x78,0x02,0x00,0x00,0x84]
 
 var readConfigSuccess = false 
-
 const BUFF_OFFSET = 1052
 const setRamrunHeaderArr = [0xbe,0x53,0x00,0x0c,0xdc,0x05,0x01,0x20]
 const readRamrunHeaderArr = [0xbe,0x54,0xa2,0x03,0x00,0x00,0x00,0x48]
@@ -67,7 +64,6 @@ if(readConfigSuccess == true) {
     var serialPortNow = new SerialPort(configObj.comPort,{
         baudRate: 921600
     })
-
     serialPortNow.on("data",(data)=>{
         console.log(data.toString('hex'))
         if(data.toString('hex') == handShakeRequest) {
@@ -102,12 +98,9 @@ if(readConfigSuccess == true) {
         } else if(data.toString('hex') == handShakeSuccess2) {
             console.log('handShakeSuccess2 ok') 
             serialPortNow.write(Buffer.concat([Buffer.from(readRamrunHeaderArr,'hex'), ramrunSubBuff]))
-
         } else if(data.toString('hex') == loadRamrunSuccess) {
             console.log('loadRamrunSuccess ok ')  //写入ramrun成功,执行Ramrun
             serialPortNow.write(Buffer.from(sendRunRamrun,'hex'))
-        } else if(data.toString('hex') == enterRamrunSuccess) {
-
-        }
+        } 
     })
 }
